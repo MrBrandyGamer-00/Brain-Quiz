@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BRAIN QUIZ — Brandy Games</title>
+<style>
+:root{
+  --accent:#ff7a00;
+  --accent2:#ffcc00;
+  --ink:#000;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:system-ui, Arial, sans-serif;
+  color:#000;
+  background:
+    linear-gradient(120deg, rgba(255,204,0,.25), rgba(255,122,0,.25)),
+    url('https://i.postimg.cc/tRBsmbRP/Los-mejores-fondos-de-perfil-calavera-led-Dark.jpg') center/cover fixed no-repeat;
+  min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+}
+/* screens */
+.screen{display:none; width:100%; max-width:960px}
+.screen.active{display:block; animation:fade .35s ease}
+@keyframes fade{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+.card{background:#fff; border-radius:16px; padding:20px 24px; box-shadow:0 10px 40px rgba(0,0,0,.35); margin:auto}
+.game-card{width:min(780px,100%)}
+.logo{width:120px;height:120px;object-fit:cover;border-radius:16px;display:block;margin:8px auto 16px;box-shadow:0 8px 20px rgba(0,0,0,.35)}
+.title{text-align:center;font-size:36px;margin:0 0 6px;letter-spacing:.5px;color:#000}
+.company{text-align:center;color:#555;font-weight:700}
+.loading-bar{width:240px;height:8px;background:#eee;border-radius:99px;margin:18px auto 0;overflow:hidden}
+.loading-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));animation:load 5s linear forwards}
+@keyframes load{to{width:100%}}
+
+/* buttons */
+.btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:12px 18px;font-size:18px;font-weight:800;cursor:pointer;box-shadow:0 6px 20px rgba(255,122,0,.35);transition:.15s transform,.2s filter;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{filter:brightness(1.05);transform:translateY(-1px)}
+.btn.small{padding:8px 12px;font-size:14px}
+.btn.ghost{background:transparent;color:#333;border:2px solid #ddd}
+.btn-row{display:flex;flex-direction:column;gap:12px;align-items:center}
+.meta{margin-top:10px;color:#666;font-size:13px;text-align:center}
+
+/* topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.back-btn{border:none;background:transparent;font-weight:800;cursor:pointer;font-size:16px}
+.muted{color:#777}.small{font-size:12px}
+
+/* game bits */
+.question{font-size:22px;font-weight:900;text-align:center;background:linear-gradient(90deg,#fff7e6,#fff);border:1px solid #f6e4c9;padding:12px 16px;border-radius:12px}
+.options-grid{margin-top:16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.option{background:#f7f7f7;border:2px solid transparent;border-radius:12px;padding:14px;text-align:center;cursor:pointer;font-weight:800;color:#111;transition:.12s transform,.12s filter,.2s border-color}
+.option:hover{filter:brightness(1.03);transform:translateY(-1px)}
+.option.correct{border-color:#22c55e;background:#eafff0}
+.option.wrong{border-color:#ef4444;background:#ffecec}
+.feedback-row{display:flex;align-items:center;justify-content:center;gap:10px;min-height:28px;margin-top:8px}
+.emoji{font-size:28px}
+.feedback{font-weight:800}
+.hud{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.hearts{display:inline-flex;gap:4px;vertical-align:middle}
+.heart{font-size:18px;display:inline-block;transform-origin:center}
+.heart.break{animation:break .35s ease}
+@keyframes break{0%{transform:scale(1)}40%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(.6) rotate(-12deg);filter:grayscale(.9)}}
+.controls{display:flex;gap:8px;justify-content:center;margin-top:10px}
+.pulse{animation:pulse .4s ease}
+@keyframes pulse{from{transform:scale(1)}50%{transform:scale(1.2)}to{transform:scale(1)}}
+.small.muted{color:#666;font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- SPLASH (5s, auto-go to Menu) -->
+<section id="splash" class="screen active">
+  <div class="card">
+    <img src="https://i.postimg.cc/fbnYS2Bz/channels4-profile.jpg" type="image/png" alt="Game Logo" class="logo">
+    <h1 class="title">BRAIN QUIZ</h1>
+    <div class="company">Brandy Games</div>
+    <div class="loading-bar"><span></span></div>
+  </div>
+</section>
+
+<!-- MENU -->
+<section id="menu" class="screen">
+  <div class="card" style="text-align:center">
+    <h2 class="title" style="font-size:28px;margin-bottom:8px">BRAIN QUIZ</h2>
+    <div class="btn-row">
+      <button id="playBtn" class="btn">▶ Play</button> 
+      <button onclick="show('levels')">Levels</button>
+      <button id="settingsBtn" class="btn">⚙ Settings</button>
+      <button id="quitBtn" class="btn ghost">✖ Quit</button> 
+    </div>
+    <div class="meta">5 ❤️ • 5 correct in a row → 💡 1 hint • Black text everywhere</div>
+  </div>
+</section>
+
+<!-- SETTINGS -->
+<section id="settings" class="screen">
+  <div class="card">
+    <div class="topbar">
+      <button class="back-btn" data-target="menu">‹ Back</button>
+      <h3 style="margin:0">Settings</h3><div></div>
+    </div>
+    <div class="row" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
+      <label><input type="checkbox" id="showCorrect" checked> Show correct answer when wrong</label>
+    </div>
+    <div class="row" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
+      <label>Background Music: <strong>pixel-adventure.mp3</strong></label>
+      <button id="muteBtn" class="btn small">Mute</button>
+    </div>
+  </div>
+</section>
+
+<!-- GAME -->
+<section id="game" class="screen">
+  <div class="card game-card">
+    <div class="topbar">
+      <button class="back-btn" data-target="menu">‹ Menu</button>
+      <div id="progress" class="muted">Question 1 / 100</div>
+      <div class="hud">
+        <span id="score">Score: 0</span> ·
+        <span id="hearts" class="hearts"></span>
+        · <span id="hints">💡 <span id="hintsCount">0</span></span>
+        · <span id="heartTimer" class="small muted"></span>
+      </div>
+    </div>
+
+    <div id="question" class="question">…</div>
+    <div id="options" class="options-grid"></div>
+
+    <div class="feedback-row">
+      <div id="emoji" class="emoji"></div>
+      <div id="feedback" class="feedback"></div>
+    </div>
+
+    <div class="controls">
+      <button id="hintBtn" class="btn small" disabled>Use Hint (💡)</button>
+      <button id="tryAgainBtn" class="btn small" style="display:none;">Try Again</button>
+      <button id="nextBtn" class="btn small" style="display:none;">Next</button>
+      <button id="quitGameBtn" class="btn small ghost">Quit</button>
+    </div>
+  </div>
+</section>
+
+<!-- RESULT -->
+<section id="result" class="screen">
+  <div class="card" style="text-align:center">
+    <h2>Quiz Complete 🎉</h2>
+    <p id="finalScore"></p>
+
+    <div id="resultHearts" style="font-size:20px;margin-top:6px"></div>
+    <div id="resultTimer" style="margin-top:6px; font-size:14px; color:#666;"></div>
+
+    <div style="margin-top:16px;">
+      <button id="playAgain" class="btn">Play Again</button>
+      <button class="btn ghost back-btn" data-target="menu">Back to Menu</button>
+    </div>
+  </div>
+</section>
+
+<!-- AUDIO -->
+<audio id="bgm" src="pixel-adventure.mp3" loop preload="auto"></audio>
+<audio id="sfxCorrect" preload="auto"><source src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA"/></audio>
+<audio id="sfxWrong" preload="auto"><source src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA"/></audio>
+
+<script>
+/* -----------------------
+   Router + Basic elements
+   ----------------------- */
+const screens=[...document.querySelectorAll('.screen')];
+const show=id=>{ screens.forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); };
+setTimeout(()=>show('menu'),5000);
+
+const playBtn=document.getElementById('playBtn');
+const settingsBtn=document.getElementById('settingsBtn');
+document.querySelectorAll('.back-btn').forEach(b=>b.onclick=()=>show(b.dataset.target||'menu'));
+document.getElementById('quitBtn').onclick=()=>alert('Quit: close tab/app.');
+const progressEl=document.getElementById('progress');
+const scoreEl=document.getElementById('score');
+const heartsEl=document.getElementById('hearts');
+const hintsEl=document.getElementById('hintsCount');
+const questionEl=document.getElementById('question');
+const optionsEl=document.getElementById('options');
+const emojiEl=document.getElementById('emoji');
+const feedbackEl=document.getElementById('feedback');
+const hintBtn=document.getElementById('hintBtn');
+const nextBtn=document.getElementById('nextBtn');
+const tryAgainBtn=document.getElementById('tryAgainBtn');
+const quitGameBtn=document.getElementById('quitGameBtn');
+const finalScore=document.getElementById('finalScore');
+const showCorrect=document.getElementById('showCorrect');
+const heartTimerEl=document.getElementById('heartTimer');
+const resultHeartsEl=document.getElementById('resultHearts');
+const resultTimerEl=document.getElementById('resultTimer');
+
+/* Music */
+const bgm=document.getElementById('bgm');
+let muted=false;
+document.getElementById('muteBtn').onclick=()=>{
+  muted=!muted;
+  if(muted) bgm.pause(); else bgm.play().catch(()=>{});
+  document.getElementById('muteBtn').textContent=muted?'Unmute':'Mute';
+};
+
+/* -----------------------
+   Game state + settings
+   ----------------------- */
+let score=0, lives=5, hints=0, streak=0, qIndex=0, locked=false;
+const maxLives=5;
+const recoverTime=5*60*1000; // 5 minutes in ms
+
+/* -----------------------
+   Full question list (your original 100)
+   ----------------------- */
+const Q = [
+{q:"Capital of France?",a:["Paris","Rome","Madrid","Berlin"],c:0},
+{q:"Largest planet?",a:["Earth","Jupiter","Mars","Venus"],c:1},
+{q:"H2O is…",a:["Oxygen","Hydrogen","Water","Helium"],c:2},
+{q:"Fastest land animal?",a:["Cheetah","Lion","Horse","Greyhound"],c:0},
+{q:"5 + 7 = ?",a:["10","11","12","13"],c:2},
+{q:"Red Planet?",a:["Mercury","Mars","Saturn","Neptune"],c:1},
+{q:"Gas we breathe?",a:["CO₂","O₂","N₂","H₂"],c:1},
+{q:"Primary color?",a:["Green","Purple","Red","Pink"],c:2},
+{q:"Largest ocean?",a:["Indian","Pacific","Atlantic","Arctic"],c:1},
+{q:"CPU stands for?",a:["Central Processing Unit","Control Power Unit","Core Process Unit","Compute Power Unit"],c:0},
+{q:"Sun is a…",a:["Planet","Star","Comet","Galaxy"],c:1},
+{q:"Square of 9?",a:["18","27","81","99"],c:2},
+{q:"Currency of Japan?",a:["Yen","Won","Rupee","Yuan"],c:0},
+{q:"Taj Mahal city?",a:["Delhi","Agra","Mumbai","Jaipur"],c:1},
+{q:"Boiling point of water (°C)?",a:["50","90","100","120"],c:2},
+{q:"Largest mammal?",a:["Elephant","Blue whale","Giraffe","Hippo"],c:1},
+{q:"Opposite of cold?",a:["Cool","Warm","Hot","Freeze"],c:2},
+{q:"Triangle angles sum?",a:["90°","120°","180°","360°"],c:2},
+{q:"Planet with rings?",a:["Mars","Saturn","Earth","Venus"],c:1},
+{q:"Binary uses?",a:["Digits 0/1","Letters","Pixels","Nodes"],c:0},
+{q:"HTML is a…",a:["Styling","Markup","Database","OS"],c:1},
+{q:"CSS used for…",a:["Design/Style","Logic","Database","Server"],c:0},
+{q:"JS runs in…",a:["DB","Browser","Router","BIOS"],c:1},
+{q:"WWW inventor Tim…",a:["Berners-Lee","Cook","Bezos","Zuckerberg"],c:0},
+{q:"Continents on Earth?",a:["5","6","7","8"],c:2},
+{q:"Largest desert?",a:["Sahara","Gobi","Arctic","Kalahari"],c:0},
+{q:"Blood pumped by…",a:["Lungs","Brain","Heart","Liver"],c:2},
+{q:"Great Wall is in…",a:["India","China","Japan","Korea"],c:1},
+{q:"Speed of light ~",a:["3×10⁸ m/s","3×10⁶ m/s","3×10⁴ m/s","3×10² m/s"],c:0},
+{q:"Smallest prime?",a:["0","1","2","3"],c:2},
+{q:"Photosynthesis needs…",a:["Sunlight","Iron","Salt","Oil"],c:0},
+{q:"Planet we live on?",a:["Mars","Venus","Earth","Mercury"],c:2},
+{q:"Which is not a mammal?",a:["Bat","Whale","Shark","Human"],c:2},
+{q:"Largest continent?",a:["Africa","Asia","Europe","Australia"],c:1},
+{q:"Human skeleton bones ~",a:["106","206","306","406"],c:1},
+{q:"Kangaroos from…",a:["India","Brazil","Australia","Kenya"],c:2},
+{q:"Polar bears live in…",a:["Arctic","Antarctic","Sahara","Gobi"],c:0},
+{q:"Ramadan comes in…",a:["Solar year","Lunar year","Fiscal year","School year"],c:1},
+{q:"Oceans are…",a:["2","3","4","5"],c:3},
+{q:"Email founder’s @ means…",a:["At","And","Or","To"],c:0},
+{q:"SQL used for…",a:["Databases","Styling","Routing","3D"],c:0},
+{q:"USB stands for…",a:["Ultra Serial Bus","Universal Serial Bus","Unified System Bus","Universal Simple Bus"],c:1},
+{q:"Android by…",a:["Apple","Microsoft","Google","IBM"],c:2},
+{q:"iOS by…",a:["Apple","Nokia","Samsung","Huawei"],c:0},
+{q:"JPEG relates to…",a:["Audio","Video","Image","Text"],c:2},
+{q:"PNG supports…",a:["Transparency","3D","Audio","VR"],c:0},
+{q:"WWW stands for…",a:["Wide World Web","World Wide Web","World Web Wide","Web World Wide"],c:1},
+{q:"CPU part of…",a:["Hardware","Software","Network","Cloud"],c:0},
+{q:"RAM is…",a:["Permanent","Temporary","Optical","Magnetic"],c:1},
+{q:"ROM is…",a:["Read Only","Random","Rapid","Real-time"],c:0},
+{q:"Keyboard is…",a:["Input","Output","Storage","Process"],c:0},
+{q:"Monitor is…",a:["Input","Output","Storage","Process"],c:1},
+{q:"GPU for…",a:["Graphics","Audio","Network","Power"],c:0},
+{q:"USB-C shape is…",a:["Round","Square","Oval/Symmetric","Huge"],c:2},
+{q:"1 Kilobyte = … bytes",a:["100","256","512","1024"],c:3},
+{q:"Wi-Fi uses…",a:["Wires","Radio waves","Light","Strings"],c:1},
+{q:"Earth satellite?",a:["Phobos","Europa","Moon","Titan"],c:2},
+{q:"Gas in fizzy drinks?",a:["O₂","CO₂","N₂","H₂"],c:1},
+{q:"Human adult teeth ~",a:["24","28","32","36"],c:2},
+{q:"Largest bird?",a:["Eagle","Ostrich","Penguin","Swan"],c:1},
+{q:"Tallest animal?",a:["Elephant","Giraffe","Horse","Camel"],c:1},
+{q:"Rainbow colors are…",a:["5","6","7","8"],c:2},
+{q:"Penicillin discovered by…",a:["Newton","Einstein","Fleming","Curie"],c:2},
+{q:"Water formula?",a:["H2O","CO2","NaCl","O3"],c:0},
+{q:"Gas plants release?",a:["CO2","O2","N2","He"],c:1},
+{q:"Which is a browser?",a:["Windows","Chrome","Linux","Android"],c:1},
+{q:"Which is OS?",a:["Photoshop","Windows","Chrome","YouTube"],c:1},
+{q:"PDF stands for…",a:["Portable Doc Format","Public Data File","Picture Doc File","Print Data Form"],c:0},
+{q:"First month of year?",a:["March","January","June","December"],c:1},
+{q:"7×8=?",a:["54","56","58","64"],c:1},
+{q:"Prime number?",a:["21","25","29","35"],c:2},
+{q:"Even number?",a:["13","17","19","20"],c:3},
+{q:"A dozen equals…",a:["6","10","12","24"],c:2},
+{q:"Which is metal?",a:["Gold","Plastic","Wood","Glass"],c:0},
+{q:"Mammal that flies?",a:["Sparrow","Bat","Eagle","Parrot"],c:1},
+{q:"Largest rainforest?",a:["Congo","Amazon","Daintree","Borneo"],c:1},
+{q:"Country of pyramids?",a:["Peru","Mexico","Egypt","Iraq"],c:2},
+{q:"Which is programming language?",a:["HTML","CSS","Python","HTTP"],c:2},
+{q:"CSS property for color?",a:["font","paint","color","style"],c:2},
+{q:"JS array index starts at…",a:["0","1","2","-1"],c:0},
+{q:"URL means…",a:["Uniform Resource Locator","Unified Routing Link","Universal Response Line","User Remote Link"],c:0},
+{q:"HTTP status 404 = …",a:["OK","Not Found","Server Error","Redirect"],c:1},
+{q:"Battery unit…",a:["Watt","Volt","Ohm","Ampere"],c:1},
+{q:"Sound measured in…",a:["Hz","dB","m","kg"],c:1},
+{q:"Light speed fastest in…",a:["Air","Glass","Vacuum","Water"],c:2},
+{q:"Earth’s natural satellite?",a:["Moon","Sun","ISS","Comet"],c:0},
+{q:"SQL SELECT does…",a:["Insert data","Fetch data","Delete data","Update data"],c:1},
+{q:"Ctrl+C shortcut…",a:["Copy","Paste","Cut","Close"],c:0},
+{q:"Ctrl+V shortcut…",a:["View","Paste","Voice","Value"],c:1},
+{q:"PDF viewer app?",a:["VLC","Adobe Acrobat","Winamp","Paint"],c:1},
+{q:"Android app bundle?",a:["APK","EXE","DMG","BAT"],c:0},
+{q:"Apple app file?",a:["APK","IPA","JAR","EXE"],c:1},
+{q:"1 hour = … minutes",a:["30","45","60","90"],c:2},
+{q:"1 week = … days",a:["5","6","7","8"],c:2},
+{q:"Leap year has … days",a:["365","366","364","360"],c:1},
+{q:"Human senses (basic)…",a:["3","4","5","6"],c:2},
+{q:"HTML tag for link?",a:["<p>","<a>","<img>","<div>"],c:1},
+{q:"CSS for bold?",a:["font-weight","font-style","font-bold","weight"],c:0},
+{q:"‘&&’ in JS means…",a:["AND","OR","NOT","XOR"],c:0},
+{q:"NaCl is…",a:["Sugar","Salt","Baking Soda","Chalk"],c:1},
+{q:"Planet closest to Sun?",a:["Mercury","Venus","Earth","Mars"],c:0},
+{q:"Planet farthest listed?",a:["Saturn","Jupiter","Neptune","Mars"],c:2},
+{q:"Which is NOT a planet?",a:["Pluto","Neptune","Venus","Mars"],c:0},
+{q:"Email needs symbol…",a:["#","@","$","&"],c:1},
+{q:"USB used for…",a:["Power/Data","Cooking","Printing ink","Painting"],c:0},
+{q:"HD stands for…",a:["High Density","High Definition","Huge Display","Hard Define"],c:1},
+{q:"Which is search engine?",a:["Chrome","Google","Windows","Android"],c:1},
+{q:"Keyboard key for new line?",a:["Tab","Shift","Enter","Ctrl"],c:2},
+{q:"RAM stands for…",a:["Read Access Memory","Random Access Memory","Rapid Access Module","Raw Access Memory"],c:1},
+{q:"CPU ‘brain of’ …",a:["Computer","Network","Cable","Mouse"],c:0},
+{q:"AI stands for…",a:["Analog Input","Artificial Intelligence","Auto Index","Array Integer"],c:1},
+{q:"File extension for image?",a:[".mp3",".jpg",".exe",".pdf"],c:1},
+{q:"Bluetooth symbol color?",a:["Blue","Red","Green","Yellow"],c:0},
+{q:"Instagram is for…",a:["Photos/Videos","Banking","Coding","Navigation"],c:0},
+{q:"YouTube mainly…",a:["Documents","Videos","Emails","Maps"],c:1},
+{q:"Spreadsheet app?",a:["Word","Excel","PowerPoint","Photos"],c:1}
+]; // ~100 (kept from original)
+
+/* -----------------------
+   Helpers: render hearts, timer
+   ----------------------- */
+function renderHearts(){
+  heartsEl.innerHTML='';
+  for(let i=0;i<maxLives;i++){
+    const span=document.createElement('span');
+    span.className='heart';
+    span.textContent=i<lives?'❤️':'🖤';
+    heartsEl.appendChild(span);
+  }
+}
+
+function updateHeartTimer(){
+  if(lives>=maxLives){
+    heartTimerEl.textContent="❤️ Full";
+    return;
+  }
+  let lastLost=parseInt(localStorage.getItem("lastLost")) || Date.now();
+  let now=Date.now();
+  // Calculate how many ms until next recovery for current saved lastLost
+  let elapsed = now - lastLost;
+  // if elapsed negative (clock changed) clamp to 0
+  if(elapsed < 0) elapsed = 0;
+  let nextIn = recoverTime - (elapsed % recoverTime);
+  // If player already gained some recovered hearts (due to long away), we show correct nextIn
+  let recovered = Math.floor(elapsed / recoverTime);
+  let effectiveLives = Math.min(maxLives, lives + recovered);
+  if(effectiveLives >= maxLives){
+    heartTimerEl.textContent="❤️ Full";
+    return;
+  }
+  let minutes = Math.floor(nextIn / 60000);
+  let seconds = Math.floor((nextIn % 60000) / 1000);
+  heartTimerEl.textContent = `+1 in ${minutes}:${seconds.toString().padStart(2,'0')}`;
+}
+
+/* Save + restore lives (persistent) */
+function saveLivesTimestamp(){
+  // store lives AND a timestamp for when last life was lost (if lives < max)
+  localStorage.setItem('lives', String(lives));
+  if(lives < maxLives){
+    if(!localStorage.getItem('lastLost')) {
+      localStorage.setItem('lastLost', String(Date.now()));
+    } else {
+      // keep existing lastLost (we only update on new loss)
+    }
+  } else {
+    localStorage.removeItem('lastLost');
+  }
+}
+
+function restoreLives(){
+  let savedLives = parseInt(localStorage.getItem('lives'));
+  let lastLost = parseInt(localStorage.getItem('lastLost'));
+  if(!isNaN(savedLives)) lives = savedLives;
+  if(!isNaN(lastLost) && lives < maxLives){
+    let now = Date.now();
+    let diff = now - lastLost;
+    if(diff < 0) diff = 0;
+    let recovered = Math.floor(diff / recoverTime);
+    if(recovered > 0){
+      lives = Math.min(maxLives, lives + recovered);
+      if(lives >= maxLives){
+        localStorage.removeItem('lastLost');
+      } else {
+        // set lastLost to the remainder offset so timer aligns
+        let remainder = diff % recoverTime;
+        localStorage.setItem('lastLost', String(now - remainder));
+      }
+      localStorage.setItem('lives', String(lives));
+    }
+  }
+  renderHearts();
+  updateHeartTimer();
+}
+
+/* Auto recovery loop */
+setInterval(()=>{
+  // If lives saved in storage differ from in-memory (e.g. resumed), sync
+  let storedLives = parseInt(localStorage.getItem('lives'));
+  if(!isNaN(storedLives) && storedLives !== lives){
+    lives = storedLives;
+    renderHearts();
+  }
+
+  // If below max, check if it's time to add one
+  if(lives < maxLives){
+    let lastLost = parseInt(localStorage.getItem('lastLost')) || Date.now();
+    let now = Date.now();
+    let diff = now - lastLost;
+    if(diff >= recoverTime){
+      // Calculate how many to recover (in case many intervals passed)
+      let count = Math.floor(diff / recoverTime);
+      lives = Math.min(maxLives, lives + count);
+      if(lives >= maxLives){
+        localStorage.removeItem('lastLost');
+      } else {
+        // advance lastLost by count*recoverTime
+        localStorage.setItem('lastLost', String(lastLost + count * recoverTime));
+      }
+      localStorage.setItem('lives', String(lives));
+      renderHearts();
+    }
+  }
+  updateHeartTimer();
+
+  // live update result HUD if shown
+  if(document.getElementById('result').classList.contains('active')){
+    renderResultHUD();
+  }
+}, 1000);
+
+/* -----------------------
+   Game functions: load, choose, hints
+   ----------------------- */
+function loadQuestion(){
+  if(qIndex >= Q.length){
+    showResult();
+    return;
+  }
+  const q = Q[qIndex];
+  progressEl.textContent = `Question ${qIndex+1} / ${Q.length}`;
+  questionEl.textContent = q.q;
+  optionsEl.innerHTML = '';
+  emojiEl.textContent=''; feedbackEl.textContent='';
+  hintBtn.disabled = hints <= 0;
+  locked = false;
+
+  q.a.forEach((txt, i) => {
+    const b = document.createElement('button');
+    b.className='option'; b.textContent=txt;
+    b.onclick = () => choose(i, q.c, b);
+    optionsEl.appendChild(b);
+  });
+}
+
+function choose(i, c, btn){
+  if(locked) return;
+  locked = true;
+  const buttons = [...optionsEl.children];
+  buttons.forEach(b=>b.disabled=true);
+
+  if(i === c){
+    btn.classList.add('correct');
+    score += 10; scoreEl.textContent = `Score: ${score}`;
+    streak++; emojiEl.textContent='😄'; feedbackEl.textContent='Correct!';
+    if(streak>0 && streak%5===0){ hints++; hintsEl.textContent=hints; flashBulb(); }
+    if(qIndex < Q.length-1){ nextBtn.style.display='inline-block'; tryAgainBtn.style.display='none'; }
+    else { showResult(); }
+  } else {
+    btn.classList.add('wrong');
+    if(showCorrect.checked && buttons[c]) buttons[c].classList.add('correct');
+    emojiEl.textContent='😞'; feedbackEl.textContent='Wrong!';
+    streak=0;
+    lives--;
+    // record lastLost timestamp for recovery if lives below max
+    if(lives < maxLives){
+      // if lastLost not set, set it to now; else keep previous so recovery continues
+      if(!localStorage.getItem('lastLost')) localStorage.setItem('lastLost', String(Date.now()));
+    }
+    // save lives always
+    localStorage.setItem('lives', String(lives));
+    renderHearts();
+    // break animation for the heart that was just lost
+    const heartIdx = lives; // now index points to the rightmost filled (after decrement)
+    const h = heartsEl.querySelectorAll('.heart')[heartIdx];
+    if(h) h.classList.add('break');
+
+    if(lives <= 0){
+      finalScore.textContent=`Game Over! Your score: ${score} / ${Q.length*10}`;
+      // clear saved progress on game over
+      localStorage.removeItem('progress');
+      setTimeout(()=>showResult(),600);
+    } else {
+      tryAgainBtn.style.display='inline-block';
+      nextBtn.style.display='none';
+    }
+  }
+}
+
+nextBtn.onclick = ()=>{ nextBtn.style.display='none'; qIndex++; loadQuestion(); };
+tryAgainBtn.onclick = ()=>{ tryAgainBtn.style.display='none'; locked=false; loadQuestion(); };
+
+function flashBulb(){
+  const h=document.getElementById('hints');
+  h.classList.add('pulse');
+  setTimeout(()=>h.classList.remove('pulse'),400);
+}
+
+/* Hint */
+hintBtn.onclick = ()=>{
+  if(hints <= 0) return;
+  hints--; hintsEl.textContent = hints; hintBtn.disabled = hints<=0;
+  const q = Q[qIndex];
+  const wrong = [0,1,2,3].filter(x=>x!==q.c);
+  for(let k=0;k<2;k++){
+    const idx = wrong.splice(Math.floor(Math.random()*wrong.length),1)[0];
+    const b = optionsEl.children[idx];
+    if(b){ b.disabled=true; b.style.opacity=.55; b.style.filter='grayscale(1)'; }
+  }
+};
+
+/* -----------------------
+   Save/Resume progress (Quit)
+   ----------------------- */
+function quitGame(){
+  const progress = {
+    qIndex: qIndex,
+    score: score,
+    hints: hints,
+    streak: streak,
+    lives: lives
+  };
+  localStorage.setItem('progress', JSON.stringify(progress));
+  // also ensure lives & lastLost are stored
+  localStorage.setItem('lives', String(lives));
+  if(lives < maxLives && !localStorage.getItem('lastLost')) localStorage.setItem('lastLost', String(Date.now()));
+  show('menu');
+}
+quitGameBtn.onclick = quitGame;
+
+/* -----------------------
+   Start / Resume
+   ----------------------- */
+function startGame(){
+  show('game');
+  if(!muted) bgm.play().catch(()=>{});
+  // If saved progress exists, load it
+  const saved = localStorage.getItem('progress');
+  if(saved){
+    try{
+      const d = JSON.parse(saved);
+      qIndex = (typeof d.qIndex === 'number')? d.qIndex : 0;
+      score = (typeof d.score === 'number')? d.score : 0;
+      hints = (typeof d.hints === 'number')? d.hints : 0;
+      streak = (typeof d.streak === 'number')? d.streak : 0;
+      lives = (typeof d.lives === 'number')? d.lives : maxLives;
+    }catch(e){
+      qIndex=0; score=0; hints=0; streak=0; lives=maxLives;
+    }
+  } else {
+    qIndex=0; score=0; hints=0; streak=0; lives=maxLives;
+  }
+  // restore lives with recovery
+  restoreLives();
+  scoreEl.textContent = `Score: ${score}`;
+  hintsEl.textContent = hints;
+  // update UI and load
+  renderHearts();
+  updateHeartTimer();
+  loadQuestion();
+}
+playBtn.onclick = startGame;
+document.getElementById('playAgain').onclick = ()=>{
+  // Play Again = fresh new game (clear progress)
+  localStorage.removeItem('progress');
+  localStorage.setItem('lives', String(maxLives));
+  localStorage.removeItem('lastLost');
+  startGame();
+};
+
+/* -----------------------
+   Result HUD + showResult
+   ----------------------- */
+function renderResultHUD(){
+  resultHeartsEl.innerHTML = '';
+  for(let i=0;i<maxLives;i++){
+    const span=document.createElement('span');
+    span.className='heart';
+    span.textContent = i < lives ? '❤️' : '🖤';
+    resultHeartsEl.appendChild(span);
+  }
+  if(lives >= maxLives){
+    resultTimerEl.textContent = "❤️ Full";
+    return;
+  }
+  let lastLost = parseInt(localStorage.getItem('lastLost')) || Date.now();
+  let now = Date.now();
+  let elapsed = now - lastLost;
+  if(elapsed < 0) elapsed = 0;
+  let remaining = recoverTime - (elapsed % recoverTime);
+  if(remaining < 0) remaining = 0;
+  let minutes = Math.floor(remaining/60000);
+  let seconds = Math.floor((remaining%60000)/1000);
+  resultTimerEl.textContent = `+1 in ${minutes}:${seconds.toString().padStart(2,'0')}`;
+}
+
+function showResult(){
+  finalScore.textContent = `Your score: ${score} / ${Q.length*10}`;
+  show('result');
+  renderResultHUD();
+  // finished game -> clear saved progress (so start fresh next time)
+  localStorage.removeItem('progress');
+}
+
+/* -----------------------
+   Initialize UI on load
+   ----------------------- */
+renderHearts();
+updateHeartTimer();
+</script>
+</body>
+</html>
